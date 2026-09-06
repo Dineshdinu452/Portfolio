@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Manrope, Satisfy } from "next/font/google";
+import {
+  Alex_Brush,
+  Geist,
+  Geist_Mono,
+  Inter,
+  Manrope,
+  Satisfy,
+} from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,6 +35,12 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
+const alexBrush = Alex_Brush({
+  variable: "--font-alex-brush",
+  weight: "400",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Dinesh Kumar",
   description: "Portfolio of Dinesh Kumar",
@@ -37,7 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${satisfy.variable} ${manrope.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${satisfy.variable} ${manrope.variable} ${alexBrush.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

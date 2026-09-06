@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+  type Variants,
+} from "framer-motion";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
@@ -23,6 +31,11 @@ const CAT_END_RIGHT_INSET = -55;
 const CAT_END_BOTTOM_OVERHANG = 5;
 const CAT_BOTTOM_THRESHOLD = 0.95;
 
+// Auto-follow tuning: how close to the bottom counts as "at bottom", and how
+// much upward movement counts as deliberate (vs. sub-pixel scroll noise).
+const AUTO_SCROLL_BOTTOM_THRESHOLD = 80;
+const AUTO_SCROLL_UP_EPSILON = 4;
+
 const PROJECT_IMAGES = [
   "/images/project1bg.png",
   "/images/project2bg.png",
@@ -30,11 +43,10 @@ const PROJECT_IMAGES = [
 ];
 
 const QUICK_REPLIES = [
-  "My experience",
-  "How I use AI",
   "About me",
-  "Contact",
+  "My experience",
   "What people say",
+  "Contact",
 ];
 
 const QUICK_REPLY_RESPONSES: Record<string, string> = {
@@ -44,7 +56,7 @@ const QUICK_REPLY_RESPONSES: Record<string, string> = {
 
 const WRAP_MESSAGES: Record<string, string> = {
   "About me":
-    "Holla !! That's a wrap on me. Dig into my experience, see how I use AI, hear the receipts, or hit me up directly.",
+    "Holla !! That's a wrap on me. Dig into my experience, hear the receipts, or hit me up directly.",
   "My experience":
     "Mostly B2B SaaS, dashboards, workflows, and the unglamorous-but-critical screens people live in every day.",
   "What people say": "Want to talk to me? Happy to connect you.",
@@ -53,6 +65,170 @@ const WRAP_MESSAGES: Record<string, string> = {
 // Chat progression: 0 idle, 1 typing, 2 msg1, 3 msg2, 4 "My work" reply,
 // 5 project cards, 6 closing typing, 7 closing message, 8 quick-reply pills.
 const CHAT_STEP_DELAYS = [3300, 4000, 4500, 5200, 6100, 8100, 9100, 9800];
+
+const EASE_PREMIUM = [0.16, 1, 0.3, 1] as const;
+
+const CLOSING_CONTAINER_VARIANTS: Variants = {
+  hidden: {},
+  visible: {},
+};
+
+const ATMOSPHERE_VARIANTS: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
+
+const FOOTER_LINE_VARIANTS: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
+
+function VibeCodedText() {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+
+  return (
+    <motion.span
+      className="relative inline-block cursor-default text-[#2a68c2]"
+      animate={{ x: offset.x, y: offset.y, scale: isHovering ? 1.04 : 1 }}
+      transition={{ type: "spring", stiffness: 220, damping: 18 }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseMove={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        setOffset({
+          x: (event.clientX - rect.left - rect.width / 2) * 0.25,
+          y: (event.clientY - rect.top - rect.height / 2) * 0.25,
+        });
+      }}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setOffset({ x: 0, y: 0 });
+      }}
+    >
+      Happily vibe coded
+      <motion.span
+        aria-hidden
+        className="absolute inset-x-0 -bottom-0.5 h-px origin-left bg-[#2a68c2]"
+        animate={{ scaleX: isHovering ? 1 : 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      />
+    </motion.span>
+  );
+}
+
+// Closing-moment sequence: 0 idle (not yet in view), 1 atmosphere + line
+// revealed, 2 signature drawing, 3 settled (arrow float enabled).
+function ClosingMoment() {
+  const reduceMotion = !!useReducedMotion();
+  const [stage, setStage] = useState<0 | 1 | 2 | 3>(() =>
+    reduceMotion ? 3 : 0
+  );
+
+  const revealProgress = useMotionValue(reduceMotion ? 100 : 0);
+  const signatureBlur = useMotionValue(reduceMotion ? 0 : 6);
+  const signatureMask = useTransform(
+    revealProgress,
+    (value) =>
+      `linear-gradient(90deg, black 0%, black ${value}%, transparent ${Math.min(
+        value + 14,
+        100
+      )}%)`
+  );
+  const signatureFilter = useTransform(signatureBlur, (value) => `blur(${value}px)`);
+
+  useEffect(() => {
+    if (stage !== 2 || reduceMotion) return;
+    const maskAnimation = animate(revealProgress, 100, {
+      duration: 1.3,
+      ease: [0.65, 0, 0.35, 1],
+    });
+    const blurAnimation = animate(signatureBlur, 0, {
+      duration: 1.3,
+      ease: "easeOut",
+      onComplete: () => setStage(3),
+    });
+    return () => {
+      maskAnimation.stop();
+      blurAnimation.stop();
+    };
+  }, [stage, reduceMotion, revealProgress, signatureBlur]);
+
+  return (
+    <div className="relative flex w-full flex-col items-center gap-[40px]">
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 50% 100%, rgba(196,219,224,0.35) 0%, rgba(240,246,244,0) 70%)",
+        }}
+        initial="hidden"
+        animate={stage >= 1 ? "visible" : "hidden"}
+        variants={ATMOSPHERE_VARIANTS}
+        transition={{ duration: reduceMotion ? 0 : 1.6, ease: EASE_PREMIUM }}
+      />
+
+      <motion.button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Back to top"
+        className="relative flex h-[40px] w-[40px] items-center justify-center rounded-full border border-white/72 shadow-[0px_4px_14px_0px_rgba(30,45,70,0.08)] backdrop-blur-[14px]"
+        style={{ backgroundColor: "rgba(255,255,255,0.58)" }}
+        animate={
+          stage >= 3 && !reduceMotion ? { y: [0, -4, 0] } : { y: 0 }
+        }
+        transition={
+          stage >= 3 && !reduceMotion
+            ? { duration: 2.6, repeat: Infinity, ease: "easeInOut" }
+            : { duration: 0.3 }
+        }
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[inherit] shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.9)]"
+        />
+        <Image src="/icons/scroll-top-arrow.svg" alt="" width={20} height={20} />
+      </motion.button>
+
+      <motion.div
+        className="flex flex-col items-center gap-[20px] text-center"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={CLOSING_CONTAINER_VARIANTS}
+        onViewportEnter={() =>
+          setStage((current) => (current === 0 ? 1 : current))
+        }
+      >
+        <motion.p
+          initial="hidden"
+          animate={stage >= 1 ? "visible" : "hidden"}
+          variants={FOOTER_LINE_VARIANTS}
+          transition={{ duration: reduceMotion ? 0 : 0.5, ease: EASE_PREMIUM }}
+          className="font-body text-[18px] leading-[34px] text-[#000614]"
+          onAnimationComplete={() =>
+            setStage((current) => (current === 1 ? 2 : current))
+          }
+        >
+          Lovingly designed. <VibeCodedText />
+        </motion.p>
+
+        <motion.p
+          className="font-signature text-[48px] leading-normal text-[#625b5b]"
+          style={{
+            WebkitMaskImage: signatureMask,
+            maskImage: signatureMask,
+            filter: signatureFilter,
+          }}
+        >
+          Dinesh
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+}
 
 function formatTimestamp(date: Date) {
   const day = date.getDate();
@@ -78,6 +254,8 @@ export function Hero() {
   const [latestWrapStep, setLatestWrapStep] = useState<0 | 1 | 2>(0);
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const autoFollowRef = useRef(true);
+  const lastScrollYRef = useRef(0);
 
   useEffect(() => {
     const contentTimer = setTimeout(() => setShowContent(true), 450);
@@ -97,6 +275,7 @@ export function Hero() {
 
   useEffect(() => {
     if (!showDivider && chatStep === 0) return;
+    if (!autoFollowRef.current) return;
     window.scrollTo({
       top: document.documentElement.scrollHeight,
       behavior: "smooth",
@@ -131,6 +310,7 @@ export function Hero() {
     if (!el) return;
     function handleTransitionEnd(e: TransitionEvent) {
       if (e.propertyName !== "height") return;
+      if (!autoFollowRef.current) return;
       window.scrollTo({
         top: document.documentElement.scrollHeight,
         behavior: "smooth",
@@ -148,6 +328,18 @@ export function Hero() {
         document.documentElement.scrollHeight - window.innerHeight;
       const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
       setScrollProgress(Math.min(Math.max(progress, 0), 1));
+
+      const currentY = window.scrollY;
+      const distanceFromBottom = maxScroll - currentY;
+      if (distanceFromBottom <= AUTO_SCROLL_BOTTOM_THRESHOLD) {
+        autoFollowRef.current = true;
+      } else if (currentY < lastScrollYRef.current - AUTO_SCROLL_UP_EPSILON) {
+        // Programmatic auto-scroll only ever moves scrollY toward the
+        // bottom, so any observed upward movement is genuine user intent.
+        autoFollowRef.current = false;
+      }
+      lastScrollYRef.current = currentY;
+
       ticking = false;
     }
 
@@ -280,7 +472,7 @@ export function Hero() {
 
           <div
             ref={contentRef}
-            className="flex w-full flex-col items-center gap-[32px] px-6 pb-[100px] pt-6 sm:px-8 sm:pt-8"
+            className="flex w-full flex-col items-center gap-[20px] px-6 pb-[100px] pt-6 sm:px-8 sm:pt-8"
           >
             {showContent && (
               <div
@@ -663,6 +855,10 @@ export function Hero() {
                       </button>
                     ))}
                   </div>
+                )}
+
+                {showFollowUpPills && remainingQuickReplies.length === 0 && (
+                  <ClosingMoment />
                 )}
               </div>
             )}
