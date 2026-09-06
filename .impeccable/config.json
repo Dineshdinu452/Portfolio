@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "typing-bounce",
+        "files": [
+          "src/components/Hero/Hero.tsx"
+        ],
+        "createdAt": "2026-09-03T19:51:43.256Z",
+        "reason": "typing-bounce is the standard 3-dot chat 'typing...' indicator (iMessage/Slack/WhatsApp convention) using plain ease-in-out, not an elastic/overshoot curve; the dots' up-down motion is the literal intended metaphor, not decorative UI-transition easing"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/components/Hero/Hero.tsx"
+        ],
+        "createdAt": "2026-09-04T09:25:26.645Z",
+        "reason": "card must resize to a JS-measured dynamic chat-content height (border+shadow boundary, not just inner content); grid-template-rows has equal reflow cost for this repeated multi-stage growth (not a single toggle) and only fires a few times during a one-time ~10s intro sequence, not a high-frequency interaction"
+      }
+    ]
+  }
+}

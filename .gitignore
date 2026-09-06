@@ -42,3 +42,6 @@ next-env.d.ts
 
 # claude code local settings
 .claude/settings.local.json
+
+# impeccable design-lint cache (regenerated; config.json stays tracked)
+.impeccable/hook.cache.json
