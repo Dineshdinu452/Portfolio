@@ -51,8 +51,8 @@ function MasonryPhoto({ src, height }: { src: string; height: number }) {
 
   return (
     <div
-      className="relative w-full shrink-0 overflow-hidden rounded-[10px]"
-      style={{ height }}
+      className="relative h-[calc(var(--photo-h)*0.6)] w-full shrink-0 overflow-hidden rounded-[10px] sm:h-[var(--photo-h)]"
+      style={{ "--photo-h": `${height}px` } as React.CSSProperties}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >

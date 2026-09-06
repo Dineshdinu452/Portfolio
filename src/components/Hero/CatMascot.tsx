@@ -43,7 +43,7 @@ export function CatMascot({
       >
         {showTooltip && (
           <div
-            className="font-body pointer-events-none absolute -top-[42px] left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full border border-white bg-gradient-to-b from-white to-[#f7f7f6] px-4 py-2 text-[12px] font-medium tracking-[-0.01em] text-[#2b3140] shadow-[0_10px_24px_-8px_rgba(0,0,0,0.28),0_1px_2px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)] dark:border-white/10 dark:from-[#23262b] dark:to-[#1b1d21] dark:text-white/90"
+            className="font-body pointer-events-none absolute -top-[42px] left-1/2 z-30 max-w-[min(220px,80vw)] -translate-x-1/2 rounded-full border border-white bg-gradient-to-b from-white to-[#f7f7f6] px-4 py-2 text-[12px] font-medium tracking-[-0.01em] text-[#2b3140] shadow-[0_10px_24px_-8px_rgba(0,0,0,0.28),0_1px_2px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)] dark:border-white/10 dark:from-[#23262b] dark:to-[#1b1d21] dark:text-white/90"
             style={{ animation: "tooltip-pop 0.3s cubic-bezier(0.16,1,0.3,1)" }}
           >
             <span className="mr-1.5 inline-block size-[6px] rounded-full bg-emerald-400 align-middle" />

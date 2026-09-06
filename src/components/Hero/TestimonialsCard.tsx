@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type CardId = "1" | "2" | "3";
 type Position = "center" | "left" | "right";
@@ -43,31 +43,45 @@ const SPRING = {
 
 const AUTO_ADVANCE_MS = 5000;
 
-function useCompactOffset() {
-  const [compact, setCompact] = useState(false);
+// Container width at which cards render at their natural (Figma) size; below
+// that, width/height and offsets scale down together so the side cards never
+// overflow the row, down to a floor so they stay legible.
+const LAYOUT_NATURAL_WIDTH = 500;
+const LAYOUT_MIN_SCALE = 0.6;
+
+function useLayoutScale(containerRef: React.RefObject<HTMLDivElement | null>) {
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    function check() {
-      setCompact(window.innerWidth < 480);
-    }
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+    const el = containerRef.current;
+    if (!el) return;
 
-  return compact ? 0.55 : 1;
+    function measure() {
+      const width = el!.getBoundingClientRect().width;
+      setScale(
+        Math.min(1, Math.max(LAYOUT_MIN_SCALE, width / LAYOUT_NATURAL_WIDTH))
+      );
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [containerRef]);
+
+  return scale;
 }
 
 function TestimonialSlide({
   id,
   position,
-  offsetScale,
+  scale,
   visible,
   onSelect,
 }: {
   id: CardId;
   position: Position;
-  offsetScale: number;
+  scale: number;
   visible: boolean;
   onSelect: () => void;
 }) {
@@ -76,9 +90,9 @@ function TestimonialSlide({
   const image = `/images/testimonials/${id}-${isCenter ? "default" : "blurred"}.png`;
   const [parallax, setParallax] = useState({ x: 0, y: 0, rotate: 0 });
 
-  const baseX = variant.x * offsetScale;
-  const baseY = variant.y * offsetScale;
-  const baseRotate = variant.rotate * offsetScale;
+  const baseX = variant.x * scale;
+  const baseY = variant.y * scale;
+  const baseRotate = variant.rotate * scale;
 
   function handleMouseMove(e: React.MouseEvent<HTMLButtonElement>) {
     if (!isCenter) return;
@@ -105,8 +119,8 @@ function TestimonialSlide({
       }
       className="absolute overflow-hidden rounded-[4px] border-0 p-0"
       style={{
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
+        width: CARD_WIDTH * scale,
+        height: CARD_HEIGHT * scale,
         cursor: isCenter ? "default" : "pointer",
         pointerEvents: visible ? "auto" : "none",
         boxShadow: isCenter
@@ -145,7 +159,7 @@ function TestimonialSlide({
             : ""
         }
         fill
-        sizes="280px"
+        sizes="(max-width: 640px) 60vw, 280px"
         className="object-cover"
       />
     </motion.button>
@@ -157,7 +171,8 @@ export function TestimonialsCard({ style }: { style?: React.CSSProperties }) {
     useState<Record<CardId, Position>>(INITIAL_POSITIONS);
   const [isHovering, setIsHovering] = useState(false);
   const [backCardsRevealed, setBackCardsRevealed] = useState(false);
-  const offsetScale = useCompactOffset();
+  const rowRef = useRef<HTMLDivElement>(null);
+  const scale = useLayoutScale(rowRef);
 
   useEffect(() => {
     const timer = setTimeout(() => setBackCardsRevealed(true), 2000);
@@ -200,6 +215,7 @@ export function TestimonialsCard({ style }: { style?: React.CSSProperties }) {
       </h3>
 
       <div
+        ref={rowRef}
         className="relative flex h-[360px] w-full items-center justify-center"
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
@@ -211,7 +227,7 @@ export function TestimonialsCard({ style }: { style?: React.CSSProperties }) {
               key={id}
               id={id}
               position={position}
-              offsetScale={offsetScale}
+              scale={scale}
               visible={position === "center" || backCardsRevealed}
               onSelect={() => {
                 if (position === "left") rotateToCenter("left");

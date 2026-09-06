@@ -27,7 +27,6 @@ const PROFILE_SMALL = { size: 70, radius: 17.5 };
 
 const CAT_START_LEFT = 23;
 const CAT_START_TOP = -65;
-const CAT_END_RIGHT_INSET = -55;
 const CAT_END_BOTTOM_OVERHANG = 5;
 const CAT_BOTTOM_THRESHOLD = 0.95;
 
@@ -35,6 +34,14 @@ const CAT_BOTTOM_THRESHOLD = 0.95;
 // much upward movement counts as deliberate (vs. sub-pixel scroll noise).
 const AUTO_SCROLL_BOTTOM_THRESHOLD = 80;
 const AUTO_SCROLL_UP_EPSILON = 4;
+
+// Draggable card width, resized via the bezel-bar handles. MAX intentionally
+// exceeds any realistic viewport — CSS max-w-full on the card is what
+// actually stops it, so dragging wide just previews the layout at whatever
+// width the screen can give it.
+const DEFAULT_CARD_WIDTH = 700;
+const MIN_CARD_WIDTH = 375;
+const MAX_CARD_WIDTH = 1440;
 
 const PROJECT_IMAGES = [
   "/images/project1bg.png",
@@ -230,6 +237,59 @@ function ClosingMoment() {
   );
 }
 
+// Device-bezel bar (like a phone's side buttons) that fades in when the hero
+// frame is hovered and doubles as a drag handle to resize the card's width —
+// fixed to the viewport (not the card) so it stays put while the page
+// scrolls. Its own position tracks the live cardWidth, since dragging can
+// move the card's edges anywhere between MIN_CARD_WIDTH and MAX_CARD_WIDTH.
+function DeviceBezelBar({
+  side,
+  visible,
+  cardWidth,
+  onResizeStart,
+}: {
+  side: "left" | "right";
+  visible: boolean;
+  cardWidth: number;
+  onResizeStart: (side: "left" | "right", event: React.PointerEvent) => void;
+}) {
+  const halfWidth = cardWidth / 2;
+  const left =
+    side === "left"
+      ? `calc(50% - ${halfWidth + 24}px)`
+      : `calc(50% + ${halfWidth + 12}px)`;
+
+  return (
+    <motion.div
+      role="slider"
+      aria-label={`Resize hero card from the ${side}`}
+      aria-valuemin={MIN_CARD_WIDTH}
+      aria-valuemax={MAX_CARD_WIDTH}
+      aria-valuenow={Math.round(cardWidth)}
+      onPointerDown={(event) => onResizeStart(side, event)}
+      className="fixed top-[256px] z-30 hidden cursor-ew-resize touch-none flex-col items-center justify-center gap-[6px] rounded-full border border-white/15 bg-[rgba(13,13,13,0.5)] shadow-[0px_0px_0px_1px_rgba(255,255,255,0.18),0px_0px_20px_0px_rgba(255,255,255,0.18)] backdrop-blur-[8px] min-[800px]:flex"
+      style={{
+        width: 12,
+        height: 160,
+        left,
+        pointerEvents: visible ? "auto" : "none",
+      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: visible ? 1 : 0 }}
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 1.04 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+    >
+      {Array.from({ length: 3 }).map((_, i) => (
+        <span
+          key={i}
+          className="size-[4px] shrink-0 rounded-full bg-white/75"
+        />
+      ))}
+    </motion.div>
+  );
+}
+
 function formatTimestamp(date: Date) {
   const day = date.getDate();
   const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
@@ -252,6 +312,9 @@ export function Hero() {
   const [replyThreads, setReplyThreads] = useState<string[]>([]);
   const [latestRevealed, setLatestRevealed] = useState(false);
   const [latestWrapStep, setLatestWrapStep] = useState<0 | 1 | 2>(0);
+  const [isFrameHovering, setIsFrameHovering] = useState(false);
+  const [isResizingFrame, setIsResizingFrame] = useState(false);
+  const [cardWidth, setCardWidth] = useState(DEFAULT_CARD_WIDTH);
   const contentRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const autoFollowRef = useRef(true);
@@ -286,7 +349,7 @@ export function Hero() {
     if (chatStep < 4) return;
     const el = contentRef.current;
     if (el) setCardHeight(el.scrollHeight);
-  }, [chatStep, replyThreads, latestRevealed, latestWrapStep]);
+  }, [chatStep, replyThreads, latestRevealed, latestWrapStep, cardWidth]);
 
   useEffect(() => {
     const latestLabel = replyThreads[replyThreads.length - 1];
@@ -364,6 +427,42 @@ export function Hero() {
     setLatestWrapStep(0);
   }
 
+  function handleResizeStart(
+    side: "left" | "right",
+    event: React.PointerEvent
+  ) {
+    event.preventDefault();
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+
+    const startX = event.clientX;
+    const startWidth = cardWidth;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    setIsResizingFrame(true);
+
+    function handleMove(moveEvent: PointerEvent) {
+      const deltaX = moveEvent.clientX - startX;
+      const widthDelta = side === "right" ? deltaX * 2 : -deltaX * 2;
+      setCardWidth(
+        Math.min(
+          MAX_CARD_WIDTH,
+          Math.max(MIN_CARD_WIDTH, startWidth + widthDelta)
+        )
+      );
+    }
+
+    function handleUp() {
+      setIsResizingFrame(false);
+      document.body.style.userSelect = previousUserSelect;
+      handle.removeEventListener("pointermove", handleMove);
+      handle.removeEventListener("pointerup", handleUp);
+    }
+
+    handle.addEventListener("pointermove", handleMove);
+    handle.addEventListener("pointerup", handleUp);
+  }
+
   const isChatting = chatStep >= 1;
   const profile = isChatting ? PROFILE_SMALL : PROFILE_BIG;
   const bgScale = 1 + scrollProgress * 0.1;
@@ -371,7 +470,7 @@ export function Hero() {
   // Anchored to the container's own edges (not a hardcoded card width), so it
   // tracks the container's real size instead of assuming a fixed layout.
   const catPosition: React.CSSProperties = isCatAtBottom
-    ? { right: CAT_END_RIGHT_INSET, bottom: CAT_END_BOTTOM_OVERHANG }
+    ? { right: "var(--cat-right-inset)", bottom: CAT_END_BOTTOM_OVERHANG }
     : { left: CAT_START_LEFT, top: CAT_START_TOP };
 
   const lastReplyLabel = replyThreads[replyThreads.length - 1] ?? null;
@@ -438,7 +537,10 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="relative z-10 w-[700px] max-w-full">
+      <div
+        className="relative z-10 max-w-full [--cat-right-inset:-16px] sm:[--cat-right-inset:-55px]"
+        style={{ width: cardWidth }}
+      >
         {showContent && (
           <CatMascot
             key={isCatAtBottom ? "bottom" : "top"}
@@ -454,12 +556,30 @@ export function Hero() {
           />
         )}
 
+        <DeviceBezelBar
+          side="left"
+          visible={isFrameHovering || isResizingFrame}
+          cardWidth={cardWidth}
+          onResizeStart={handleResizeStart}
+        />
+        <DeviceBezelBar
+          side="right"
+          visible={isFrameHovering || isResizingFrame}
+          cardWidth={cardWidth}
+          onResizeStart={handleResizeStart}
+        />
+
         <div
           ref={cardRef}
-          className="relative w-[700px] max-w-full overflow-hidden rounded-[20px] border border-white/60 bg-white/50 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+          onMouseEnter={() => setIsFrameHovering(true)}
+          onMouseLeave={() => setIsFrameHovering(false)}
+          className="relative max-w-full overflow-hidden rounded-[20px] border border-white/60 bg-white/50 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.35)] backdrop-blur-xl"
           style={{
+            width: cardWidth,
             height: cardHeight,
-            transition: "height 0.6s cubic-bezier(0.16,1,0.3,1)",
+            transition: isResizingFrame
+              ? "none"
+              : "height 0.6s cubic-bezier(0.16,1,0.3,1)",
             animation: "card-pop-in 0.6s cubic-bezier(0.16,1,0.3,1) both",
           }}
         >
@@ -478,8 +598,8 @@ export function Hero() {
               <div
                 className="relative shrink-0 overflow-hidden border-[#e5e2dc]"
                 style={{
-                  width: profile.size,
-                  height: profile.size,
+                  width: `min(${profile.size}px, 76vw)`,
+                  height: `min(${profile.size}px, 76vw)`,
                   borderRadius: profile.radius,
                   borderWidth: isChatting ? 1 : 5,
                   animation: "clarity-reveal 1.8s cubic-bezier(0.16,1,0.3,1) both",

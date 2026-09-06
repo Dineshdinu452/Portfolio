@@ -19,7 +19,7 @@ export function AboutMeCard({ style }: { style?: React.CSSProperties }) {
 
   return (
     <div
-      className="relative flex h-[592px] w-full flex-col gap-8 rounded-[20px] bg-white px-6 pb-[40px] pt-6 shadow-[0px_2px_4px_0px_rgba(99,152,188,0.06),0px_2px_10px_0px_rgba(190,209,236,0.2)]"
+      className="relative flex min-h-[592px] w-full flex-col gap-8 rounded-[20px] bg-white px-6 pb-[40px] pt-6 shadow-[0px_2px_4px_0px_rgba(99,152,188,0.06),0px_2px_10px_0px_rgba(190,209,236,0.2)]"
       style={style}
     >
       <div className="flex flex-col-reverse gap-8 sm:flex-row sm:items-start">

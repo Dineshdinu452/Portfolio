@@ -38,7 +38,7 @@ const AWARDS = [
 export function ExperienceCard({ style }: { style?: React.CSSProperties }) {
   return (
     <div
-      className="relative flex w-[652px] flex-col gap-7 rounded-[20px] bg-white p-6 shadow-[0px_2px_4px_0px_rgba(99,152,188,0.06),0px_2px_10px_0px_rgba(190,209,236,0.2)]"
+      className="relative flex w-full max-w-[652px] flex-col gap-7 rounded-[20px] bg-white p-4 shadow-[0px_2px_4px_0px_rgba(99,152,188,0.06),0px_2px_10px_0px_rgba(190,209,236,0.2)] sm:p-6"
       style={style}
     >
       <div className="flex flex-col gap-5">
@@ -53,19 +53,24 @@ export function ExperienceCard({ style }: { style?: React.CSSProperties }) {
             <div
               key={job.title}
               className={cn(
-                "flex items-start gap-4 pb-4",
+                "flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:gap-4",
                 i !== 0 && "pt-4",
                 i !== JOBS.length - 1 &&
                   "border-b border-dashed border-[#cbced4]"
               )}
             >
-              <p className="font-body w-[170px] shrink-0 whitespace-nowrap text-sm font-medium tracking-[-0.42px] text-black">
-                {job.title}
-              </p>
-              <p className="font-body flex-1 whitespace-nowrap pr-12 text-center text-sm tracking-[-0.42px] text-[#4d4d54]">
+              <div className="flex items-baseline justify-between gap-3 sm:w-[170px] sm:shrink-0 sm:block">
+                <p className="font-body whitespace-nowrap text-sm font-medium tracking-[-0.42px] text-black">
+                  {job.title}
+                </p>
+                <p className="font-body shrink-0 whitespace-nowrap text-xs text-[#8b8f98] sm:hidden">
+                  {job.period}
+                </p>
+              </div>
+              <p className="font-body text-sm tracking-[-0.42px] text-[#4d4d54] sm:flex-1 sm:whitespace-nowrap sm:pr-12 sm:text-center">
                 {job.company}
               </p>
-              <p className="font-body shrink-0 whitespace-nowrap text-sm tracking-[-0.42px] text-[#4d4d54]">
+              <p className="font-body hidden shrink-0 whitespace-nowrap text-sm tracking-[-0.42px] text-[#4d4d54] sm:block">
                 {job.period}
               </p>
             </div>
@@ -85,7 +90,7 @@ export function ExperienceCard({ style }: { style?: React.CSSProperties }) {
           {AWARDS.map((award, i) => (
             <div
               key={i}
-              className="flex w-full items-start justify-between gap-4 rounded-[20px] border border-[#f0f0f0] bg-[#f2f2f2]/80 px-[18px] py-4"
+              className="flex w-full flex-col-reverse items-start gap-4 rounded-[20px] border border-[#f0f0f0] bg-[#f2f2f2]/80 px-[18px] py-4 sm:flex-row sm:justify-between"
             >
               <div className="flex min-w-0 flex-col items-start">
                 <p className="font-manrope text-[9.5px] uppercase tracking-[1.615px] text-[#696565]">
@@ -97,13 +102,13 @@ export function ExperienceCard({ style }: { style?: React.CSSProperties }) {
                   </p>
                 </div>
               </div>
-              <div className="relative h-[113.08px] w-[181.38px] shrink-0 overflow-hidden rounded-[16px] bg-[#e4dfdf]">
+              <div className="relative h-[100px] w-full shrink-0 overflow-hidden rounded-[16px] bg-[#e4dfdf] sm:h-[113.08px] sm:w-[181.38px]">
                 {award.image && (
                   <Image
                     src={award.image}
                     alt="Star of the Quarter award, 2025, Surveysparrow"
                     fill
-                    sizes="182px"
+                    sizes="(max-width: 640px) 100vw, 182px"
                     className="object-cover"
                   />
                 )}

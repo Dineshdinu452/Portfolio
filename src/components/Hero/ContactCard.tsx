@@ -48,7 +48,11 @@ function ContactTileImage({ contact }: { contact: Contact }) {
       alt=""
       width={CARD_WIDTH}
       height={CARD_HEIGHT}
-      className="rounded-[24px] shadow-[0px_14px_34px_-8px_rgba(0,0,0,0.25)]"
+      className="h-auto rounded-[24px] object-cover shadow-[0px_14px_34px_-8px_rgba(0,0,0,0.25)]"
+      style={{
+        width: `${(CARD_WIDTH / SLOT_WIDTH) * 100}%`,
+        aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+      }}
       initial={false}
       animate={{ rotate: contact.rotate, scale: 1 }}
       whileHover={{ rotate: contact.rotate * 0.85, scale: 1.03 }}
@@ -69,8 +73,11 @@ function ContactTile({ contact }: { contact: Contact }) {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         }}
-        className="relative flex items-center justify-center border-0 bg-transparent p-0"
-        style={{ width: SLOT_WIDTH, height: SLOT_HEIGHT }}
+        className="relative flex w-full items-center justify-center border-0 bg-transparent p-0"
+        style={{
+          maxWidth: SLOT_WIDTH,
+          aspectRatio: `${SLOT_WIDTH} / ${SLOT_HEIGHT}`,
+        }}
       >
         <ContactTileImage contact={contact} />
         {copied && (
@@ -90,8 +97,11 @@ function ContactTile({ contact }: { contact: Contact }) {
       href={contact.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center justify-center"
-      style={{ width: SLOT_WIDTH, height: SLOT_HEIGHT }}
+      className="flex w-full items-center justify-center"
+      style={{
+        maxWidth: SLOT_WIDTH,
+        aspectRatio: `${SLOT_WIDTH} / ${SLOT_HEIGHT}`,
+      }}
     >
       <ContactTileImage contact={contact} />
     </a>
